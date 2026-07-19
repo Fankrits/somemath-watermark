@@ -80,7 +80,8 @@ describe("WatermarkControls", () => {
   it("calls setMode when mode button is clicked", () => {
     const { setMode } = setup({ mode: "text" });
 
-    const imageButton = screen.getByRole("button", { name: "Image" });
+    // The redesigned button label is "image Watermark"
+    const imageButton = screen.getByRole("button", { name: /image watermark/i });
     fireEvent.click(imageButton);
 
     expect(setMode).toHaveBeenCalledWith("image");
@@ -98,9 +99,9 @@ describe("WatermarkControls", () => {
     });
   });
 
-  it("shows custom offsets when placement is custom in text mode", () => {
-    const customConfig = { ...defaultTextConfig, placement: "custom" };
-    setup({ mode: "text", textConfig: customConfig });
+  it("shows offset inputs in text mode (always visible in redesign)", () => {
+    // Offsets are always shown in the redesigned sidebar, not only in 'custom' mode
+    setup({ mode: "text", textConfig: defaultTextConfig });
 
     const xOffsetInput = screen.getByLabelText("X Offset (px)") as HTMLInputElement;
     const yOffsetInput = screen.getByLabelText("Y Offset (px)") as HTMLInputElement;
