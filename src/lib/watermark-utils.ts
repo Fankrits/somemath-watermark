@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, degrees, StandardFonts } from "pdf-lib";
+import { PDFDocument, rgb, degrees, StandardFonts, PDFFont } from "pdf-lib";
 
 export type WatermarkPlacement =
   | "top-left"
@@ -93,6 +93,30 @@ function resolveStandardFont(fontFamily: string, isBold = false, isItalic = fals
   return StandardFonts.Helvetica;
 }
 
+// Selected Google Fonts maps to TTF files
+export const GOOGLE_FONT_URLS: Record<string, string> = {
+  Inter: "https://cdn.jsdelivr.net/npm/@canvas-fonts/inter@1.0.4/Inter-Regular.ttf",
+  Roboto: "https://cdn.jsdelivr.net/npm/@canvas-fonts/roboto@1.0.4/Roboto-Regular.ttf",
+  Montserrat: "https://cdn.jsdelivr.net/npm/@canvas-fonts/montserrat@1.0.4/Montserrat-Regular.ttf",
+};
+
+export async function fetchAndEmbedGoogleFont(
+  pdfDoc: PDFDocument,
+  fontName: string,
+): Promise<PDFFont | null> {
+  const url = GOOGLE_FONT_URLS[fontName];
+  if (!url) return null;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Font fetch failed: ${response.statusText}`);
+    const arrayBuffer = await response.arrayBuffer();
+    return await pdfDoc.embedFont(new Uint8Array(arrayBuffer));
+  } catch (error) {
+    console.error("Error fetching font, using fallback:", error);
+    return null;
+  }
+}
+
 export async function applyTextWatermark(
   pdfBytes: Uint8Array,
   config: TextWatermarkConfig,
@@ -100,8 +124,18 @@ export async function applyTextWatermark(
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const pages = pdfDoc.getPages();
 
-  const fontName = resolveStandardFont(config.fontFamily, config.isBold, config.isItalic);
-  const font = await pdfDoc.embedFont(fontName);
+  let font;
+  if (GOOGLE_FONT_URLS[config.fontFamily]) {
+    const customFont = await fetchAndEmbedGoogleFont(pdfDoc, config.fontFamily);
+    font =
+      customFont ||
+      (await pdfDoc.embedFont(
+        resolveStandardFont(config.fontFamily, config.isBold, config.isItalic),
+      ));
+  } else {
+    const fontName = resolveStandardFont(config.fontFamily, config.isBold, config.isItalic);
+    font = await pdfDoc.embedFont(fontName);
+  }
 
   const { r, g, b } = parseHexColor(config.color);
 

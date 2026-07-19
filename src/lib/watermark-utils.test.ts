@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vite-plus/test";
-import { applyTextWatermark, applyImageWatermark } from "./watermark-utils";
+import { vi } from "vite-plus/test";
+import {
+  applyTextWatermark,
+  applyImageWatermark,
+  fetchAndEmbedGoogleFont,
+  GOOGLE_FONT_URLS,
+} from "./watermark-utils";
 import { PDFDocument } from "pdf-lib";
 
 // A valid 1x1 transparent PNG in base64
@@ -106,8 +112,149 @@ describe("Watermark Utilities", () => {
         xOffset: 150,
         yOffset: 250,
       });
-
       expect(watermarkedBytes.length).toBeGreaterThan(pdfBytes.length);
+    });
+  });
+
+  describe("fetchAndEmbedGoogleFont", () => {
+    it("should return null if the font is not in GOOGLE_FONT_URLS", async () => {
+      const pdfDoc = await PDFDocument.create();
+      const font = await fetchAndEmbedGoogleFont(pdfDoc, "NonExistentFont");
+      expect(font).toBeNull();
+    });
+
+    it("should return null if fetch fails (response.ok is false)", async () => {
+      const pdfDoc = await PDFDocument.create();
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () =>
+        ({
+          ok: false,
+          statusText: "Not Found",
+        }) as any;
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        const font = await fetchAndEmbedGoogleFont(pdfDoc, "Inter");
+        expect(font).toBeNull();
+        expect(consoleSpy).toHaveBeenCalled();
+      } finally {
+        globalThis.fetch = originalFetch;
+        consoleSpy.mockRestore();
+      }
+    });
+
+    it("should return null if fetch throws an error", async () => {
+      const pdfDoc = await PDFDocument.create();
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () => {
+        throw new Error("Network Error");
+      };
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        const font = await fetchAndEmbedGoogleFont(pdfDoc, "Inter");
+        expect(font).toBeNull();
+        expect(consoleSpy).toHaveBeenCalled();
+      } finally {
+        globalThis.fetch = originalFetch;
+        consoleSpy.mockRestore();
+      }
+    });
+
+    it("should fetch and embed the font successfully", async () => {
+      const pdfDoc = await PDFDocument.create();
+      const mockFont = {} as any;
+      const embedSpy = vi.spyOn(pdfDoc, "embedFont").mockResolvedValue(mockFont);
+
+      const mockBuffer = new ArrayBuffer(8);
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () =>
+        ({
+          ok: true,
+          arrayBuffer: async () => mockBuffer,
+        }) as any;
+
+      try {
+        const font = await fetchAndEmbedGoogleFont(pdfDoc, "Inter");
+        expect(font).toBe(mockFont);
+        expect(embedSpy).toHaveBeenCalledWith(new Uint8Array(mockBuffer));
+      } finally {
+        globalThis.fetch = originalFetch;
+        embedSpy.mockRestore();
+      }
+    });
+  });
+
+  describe("applyTextWatermark with Google Fonts", () => {
+    it("should support custom Google Fonts and attempt fetch", async () => {
+      const pdfBytes = await createBlankPdf();
+
+      const originalFetch = globalThis.fetch;
+      let fetchedUrl = "";
+      globalThis.fetch = async (url: any) => {
+        fetchedUrl = url;
+        return {
+          ok: false,
+          statusText: "Simulated Fetch Fail",
+        } as any;
+      };
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        const watermarkedBytes = await applyTextWatermark(pdfBytes, {
+          text: "GOOGLE FONT TEST",
+          fontFamily: "Inter",
+          fontSize: 24,
+          color: "#000000",
+          opacity: 0.8,
+          rotation: 0,
+          placement: "middle-center",
+          xOffset: 0,
+          yOffset: 0,
+        });
+
+        expect(watermarkedBytes.length).toBeGreaterThan(pdfBytes.length);
+        expect(fetchedUrl).toBe(GOOGLE_FONT_URLS.Inter);
+      } finally {
+        globalThis.fetch = originalFetch;
+        consoleSpy.mockRestore();
+      }
+    });
+
+    it("should fall back to Helvetica in applyTextWatermark if font fetching fails", async () => {
+      const pdfBytes = await createBlankPdf();
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async () =>
+        ({
+          ok: false,
+          statusText: "Not Found",
+        }) as any;
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        const watermarkedBytes = await applyTextWatermark(pdfBytes, {
+          text: "FALLBACK FONT",
+          fontFamily: "Inter",
+          fontSize: 24,
+          color: "#000000",
+          opacity: 0.8,
+          rotation: 0,
+          placement: "middle-center",
+          xOffset: 0,
+          yOffset: 0,
+        });
+
+        expect(watermarkedBytes.length).toBeGreaterThan(pdfBytes.length);
+        expect(consoleSpy).toHaveBeenCalled();
+      } finally {
+        globalThis.fetch = originalFetch;
+        consoleSpy.mockRestore();
+      }
     });
   });
 
