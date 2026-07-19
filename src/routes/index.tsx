@@ -95,6 +95,7 @@ function Home() {
   });
 
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const viewerUrlRef = useRef<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [processingBatch, setProcessingBatch] = useState(false);
 
@@ -144,11 +145,15 @@ function Home() {
           outputBytes = base64ToUint8Array(res.pdfBase64);
         }
 
-        let binary = "";
-        for (let i = 0; i < outputBytes.byteLength; i++)
-          binary += String.fromCharCode(outputBytes[i]);
-        const base64 = window.btoa(binary);
-        setViewerUrl(`data:application/pdf;base64,${base64}`);
+        // Use Blob URL — EmbedPDF renders correctly with blob: not data:
+        const blob = new Blob([outputBytes as any], { type: "application/pdf" });
+        const blobUrl = URL.createObjectURL(blob);
+        // Revoke previous blob URL to avoid memory leaks
+        if (viewerUrlRef.current && viewerUrlRef.current.startsWith("blob:")) {
+          URL.revokeObjectURL(viewerUrlRef.current);
+        }
+        viewerUrlRef.current = blobUrl;
+        setViewerUrl(blobUrl);
       } catch (err) {
         console.error("Preview generation failed:", err);
       } finally {
@@ -246,9 +251,9 @@ function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* ── STICKY HEADER ── */}
-      <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[var(--header-bg)] backdrop-blur-md">
+      <header className="shrink-0 border-b border-[var(--line)] bg-[var(--header-bg)] backdrop-blur-md z-40">
         <div className="max-w-screen-2xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--lagoon)] shadow-md">
@@ -288,10 +293,10 @@ function Home() {
         </div>
       </header>
 
-      {/* ── THREE-COLUMN LAYOUT ── */}
-      <div className="flex-1 max-w-screen-2xl mx-auto w-full grid grid-cols-1 lg:grid-cols-[280px_1fr_320px] gap-4 px-4 py-6">
-        {/* LEFT: File queue */}
-        <aside className="flex flex-col gap-4">
+      {/* ── THREE-COLUMN LAYOUT — fills remaining height ── */}
+      <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-[280px_1fr_320px] gap-4 px-4 py-4 max-w-screen-2xl mx-auto w-full">
+        {/* LEFT: File queue — scrollable */}
+        <aside className="h-full overflow-y-auto">
           <UploadQueue
             files={files}
             setFiles={setFiles}
@@ -300,9 +305,9 @@ function Home() {
           />
         </aside>
 
-        {/* CENTER: Single live EmbedPDF preview */}
-        <main className="flex flex-col min-h-0">
-          <div className="flex items-center justify-between mb-3 px-1">
+        {/* CENTER: Single live EmbedPDF preview — fills height */}
+        <main className="flex flex-col h-full min-h-0">
+          <div className="flex items-center justify-between mb-2 px-1 shrink-0">
             <p className="island-kicker">Live Preview</p>
             {isGenerating && (
               <span className="text-[10px] font-semibold text-[var(--lagoon)] animate-pulse">
@@ -310,19 +315,21 @@ function Home() {
               </span>
             )}
           </div>
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center h-[640px] island-shell rounded-2xl text-[var(--sea-ink-soft)]">
-                Loading viewer…
-              </div>
-            }
-          >
-            <EmbedPdfViewer pdfBlobUrl={viewerUrl} isLoading={isGenerating} />
-          </Suspense>
+          <div className="flex-1 min-h-0">
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center h-full island-shell rounded-2xl text-[var(--sea-ink-soft)]">
+                  Loading viewer…
+                </div>
+              }
+            >
+              <EmbedPdfViewer pdfBlobUrl={viewerUrl} isLoading={isGenerating} />
+            </Suspense>
+          </div>
         </main>
 
-        {/* RIGHT: Controls */}
-        <aside className="flex flex-col gap-4">
+        {/* RIGHT: Controls — scrollable */}
+        <aside className="h-full overflow-y-auto">
           <WatermarkControls
             mode={mode}
             setMode={setMode}
