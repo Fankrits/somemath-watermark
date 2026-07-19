@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { applyTextWatermark, applyImageWatermark } from "#/lib/watermark-utils";
 import type { TextWatermarkConfig, ImageWatermarkConfig } from "#/lib/watermark-utils";
 
-// Set up PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Set up PDF.js worker locally
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface PreviewProps {
   pdfFile: File | null;

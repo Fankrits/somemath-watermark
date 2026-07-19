@@ -20,6 +20,7 @@ export default function EmbedPdfViewer({ pdfBlobUrl }: ViewerProps) {
           src: pdfBlobUrl,
           theme: { preference: "light" },
         }}
+        style={{ width: "100%", height: "100%" }}
       />
     </div>
   );

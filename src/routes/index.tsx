@@ -1,16 +1,87 @@
-import { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import WatermarkCanvasPreview from "#/components/WatermarkCanvasPreview";
+import { createServerFn } from "@tanstack/react-start";
 import WatermarkControls from "#/components/WatermarkControls";
 import UploadQueue from "#/components/UploadQueue";
 import type { QueueFile } from "#/components/UploadQueue";
-import EmbedPdfViewer from "#/components/EmbedPdfViewer";
-import { applyTextWatermark, applyImageWatermark } from "#/lib/watermark-utils";
 import type { TextWatermarkConfig, ImageWatermarkConfig } from "#/lib/watermark-utils";
 import { Button } from "#/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import JSZip from "jszip";
 import { Download, FileDown, Layers } from "lucide-react";
+
+const WatermarkCanvasPreview = React.lazy(() =>
+  typeof window !== "undefined"
+    ? import("#/components/WatermarkCanvasPreview")
+    : Promise.resolve({
+        default: () => <div className="p-8 text-center text-gray-500">Loading editor...</div>,
+      }),
+);
+
+const EmbedPdfViewer = React.lazy(() =>
+  typeof window !== "undefined"
+    ? import("#/components/EmbedPdfViewer")
+    : Promise.resolve({
+        default: () => <div className="p-8 text-center text-gray-500">Loading reader...</div>,
+      }),
+);
+
+function uint8ArrayToBase64(arr: Uint8Array): string {
+  let binary = "";
+  const len = arr.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(arr[i]);
+  }
+  return window.btoa(binary);
+}
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binaryString = window.atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+const applyWatermarkServerFn = createServerFn({
+  method: "POST",
+})
+  .validator(
+    (data: {
+      pdfBase64: string;
+      mode: "text" | "image";
+      textConfig?: TextWatermarkConfig;
+      imageConfig?: ImageWatermarkConfig;
+      imageBase64?: string;
+      imageType?: "png" | "jpeg";
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    const { applyTextWatermark, applyImageWatermark } = await import("#/lib/watermark-utils");
+    const pdfBytes = new Uint8Array(Buffer.from(data.pdfBase64, "base64"));
+    let outputBytes: Uint8Array;
+
+    if (data.mode === "text") {
+      if (!data.textConfig) throw new Error("Missing textConfig");
+      outputBytes = await applyTextWatermark(pdfBytes, data.textConfig);
+    } else {
+      if (!data.imageBase64 || !data.imageType || !data.imageConfig) {
+        throw new Error("Missing image properties");
+      }
+      const imageBytes = new Uint8Array(Buffer.from(data.imageBase64, "base64"));
+      outputBytes = await applyImageWatermark(
+        pdfBytes,
+        imageBytes,
+        data.imageType,
+        data.imageConfig,
+      );
+    }
+
+    const resultBase64 = Buffer.from(outputBytes).toString("base64");
+    return { pdfBase64: resultBase64 };
+  });
 
 export const Route = createFileRoute("/")({ component: Home });
 
@@ -56,26 +127,57 @@ function Home() {
       const pdfBytes = new Uint8Array(arrayBuffer);
       let outputBytes: Uint8Array;
 
-      if (mode === "text") {
-        outputBytes = await applyTextWatermark(pdfBytes, textConfig);
-      } else {
-        if (!imageFile) {
-          alert("Please select an image file first.");
-          return;
+      try {
+        const { applyTextWatermark, applyImageWatermark } = await import("#/lib/watermark-utils");
+        if (mode === "text") {
+          outputBytes = await applyTextWatermark(pdfBytes, textConfig);
+        } else {
+          if (!imageFile) {
+            alert("Please select an image file first.");
+            return;
+          }
+          const imageArrayBuffer = await imageFile.arrayBuffer();
+          const imgType = imageFile.type.includes("png") ? "png" : "jpeg";
+          outputBytes = await applyImageWatermark(
+            pdfBytes,
+            new Uint8Array(imageArrayBuffer),
+            imgType as any,
+            imageConfig,
+          );
         }
-        const imageArrayBuffer = await imageFile.arrayBuffer();
-        const imgType = imageFile.type.includes("png") ? "png" : "jpeg";
-        outputBytes = await applyImageWatermark(
-          pdfBytes,
-          new Uint8Array(imageArrayBuffer),
-          imgType as any,
-          imageConfig,
-        );
+      } catch (clientErr) {
+        console.warn("Client-side watermark failed, trying server fallback:", clientErr);
+        const pdfBase64 = uint8ArrayToBase64(pdfBytes);
+        let imageBase64: string | undefined;
+        let imageType: "png" | "jpeg" | undefined;
+        if (mode === "image" && imageFile) {
+          const imgAB = await imageFile.arrayBuffer();
+          imageBase64 = uint8ArrayToBase64(new Uint8Array(imgAB));
+          imageType = imageFile.type.includes("png") ? "png" : "jpeg";
+        }
+        const res = await applyWatermarkServerFn({
+          data: {
+            pdfBase64,
+            mode,
+            textConfig,
+            imageConfig,
+            imageBase64,
+            imageType,
+          },
+        });
+        outputBytes = base64ToUint8Array(res.pdfBase64);
       }
 
-      const blob = new Blob([outputBytes as any], { type: "application/pdf" });
-      if (viewerBlobUrl) URL.revokeObjectURL(viewerBlobUrl);
-      setViewerBlobUrl(URL.createObjectURL(blob));
+      let binary = "";
+      const len = outputBytes.byteLength;
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(outputBytes[i]);
+      }
+      const base64 = window.btoa(binary);
+      if (viewerBlobUrl && viewerBlobUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(viewerBlobUrl);
+      }
+      setViewerBlobUrl(`data:application/pdf;base64,${base64}`);
     } catch (err) {
       console.error("Error generating preview document:", err);
       alert("Failed to generate preview: " + err);
@@ -109,11 +211,34 @@ function Home() {
           const pdfBytes = new Uint8Array(arrayBuffer);
           let outputBytes: Uint8Array;
 
-          if (mode === "text") {
-            outputBytes = await applyTextWatermark(pdfBytes, textConfig);
-          } else {
-            if (!imageBytes) throw new Error("No watermark image uploaded.");
-            outputBytes = await applyImageWatermark(pdfBytes, imageBytes, imgType, imageConfig);
+          try {
+            const { applyTextWatermark, applyImageWatermark } =
+              await import("#/lib/watermark-utils");
+            if (mode === "text") {
+              outputBytes = await applyTextWatermark(pdfBytes, textConfig);
+            } else {
+              if (!imageBytes) throw new Error("No watermark image uploaded.");
+              outputBytes = await applyImageWatermark(pdfBytes, imageBytes, imgType, imageConfig);
+            }
+          } catch (clientErr) {
+            console.warn("Client-side watermark failed, trying server fallback:", clientErr);
+            const pdfBase64 = uint8ArrayToBase64(pdfBytes);
+            let imageBase64: string | undefined;
+            if (mode === "image" && imageFile) {
+              const imgAB = await imageFile.arrayBuffer();
+              imageBase64 = uint8ArrayToBase64(new Uint8Array(imgAB));
+            }
+            const res = await applyWatermarkServerFn({
+              data: {
+                pdfBase64,
+                mode,
+                textConfig,
+                imageConfig,
+                imageBase64,
+                imageType: imgType,
+              },
+            });
+            outputBytes = base64ToUint8Array(res.pdfBase64);
           }
 
           const blob = new Blob([outputBytes as any], { type: "application/pdf" });
@@ -223,17 +348,25 @@ function Home() {
             </div>
 
             <TabsContent value="workspace" className="mt-6">
-              <WatermarkCanvasPreview
-                pdfFile={activeItem ? activeItem.file : null}
-                textConfig={textConfig}
-                imageConfig={imageConfig}
-                mode={mode}
-                imageFile={imageFile}
-              />
+              <Suspense
+                fallback={<div className="p-8 text-center text-gray-500">Loading editor...</div>}
+              >
+                <WatermarkCanvasPreview
+                  pdfFile={activeItem ? activeItem.file : null}
+                  textConfig={textConfig}
+                  imageConfig={imageConfig}
+                  mode={mode}
+                  imageFile={imageFile}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="reader" className="mt-6">
-              <EmbedPdfViewer pdfBlobUrl={viewerBlobUrl} />
+              <Suspense
+                fallback={<div className="p-8 text-center text-gray-500">Loading reader...</div>}
+              >
+                <EmbedPdfViewer pdfBlobUrl={viewerBlobUrl} />
+              </Suspense>
             </TabsContent>
           </Tabs>
         </main>
