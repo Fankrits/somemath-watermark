@@ -34,10 +34,15 @@ export default function WatermarkCanvasPreview({
   useEffect(() => {
     if (!pdfFile || !canvasRef.current) return;
 
+    let active = true;
+    let currentPdfDoc: any = null;
+    let currentRenderTask: any = null;
+
     const renderPage = async () => {
       setLoading(true);
       try {
         const arrayBuffer = await pdfFile.arrayBuffer();
+        if (!active) return;
         const pdfBytes = new Uint8Array(arrayBuffer);
         let watermarkedBytes: Uint8Array;
 
@@ -54,6 +59,7 @@ export default function WatermarkCanvasPreview({
         } else {
           if (imageFile && activeImageConfig) {
             const imageArrayBuffer = await imageFile.arrayBuffer();
+            if (!active) return;
             const imgType = imageFile.type.includes("png") ? "png" : "jpeg";
             watermarkedBytes = await applyImageWatermark(
               pdfBytes,
@@ -65,10 +71,20 @@ export default function WatermarkCanvasPreview({
             watermarkedBytes = pdfBytes;
           }
         }
+        if (!active) return;
 
         const loadingTask = pdfjsLib.getDocument({ data: watermarkedBytes });
         const pdfDoc = await loadingTask.promise;
+        if (!active) {
+          if (pdfDoc && typeof (pdfDoc as any).destroy === "function") {
+            (pdfDoc as any).destroy();
+          }
+          return;
+        }
+        currentPdfDoc = pdfDoc;
+
         const page = await pdfDoc.getPage(1); // Renders the first page
+        if (!active) return;
 
         const viewport = page.getViewport({ scale: 1.0 });
         const canvas = canvasRef.current!;
@@ -91,17 +107,32 @@ export default function WatermarkCanvasPreview({
           viewport: scaledViewport,
           canvas: canvas,
         };
-        await page.render(renderContext).promise;
+        currentRenderTask = page.render(renderContext);
+        await currentRenderTask.promise;
       } catch (err) {
+        if (err && (err as any).name === "RenderingCancelledException") {
+          return;
+        }
         console.error("Error rendering page:", err);
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
     // Debounce preview updates slightly to avoid high CPU usage during slider dragging
     const timeout = setTimeout(renderPage, 150);
-    return () => clearTimeout(timeout);
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+      if (currentRenderTask && typeof currentRenderTask.cancel === "function") {
+        currentRenderTask.cancel();
+      }
+      if (currentPdfDoc && typeof currentPdfDoc.destroy === "function") {
+        currentPdfDoc.destroy();
+      }
+    };
   }, [pdfFile, textConfig, textWatermark, imageConfig, imageWatermark, mode, imageFile]);
 
   if (!pdfFile) {
