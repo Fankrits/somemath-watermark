@@ -3,6 +3,18 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import {
+  ColorPicker,
+  ColorPickerArea,
+  ColorPickerContent,
+  ColorPickerEyeDropper,
+  ColorPickerFormatSelect,
+  ColorPickerHueSlider,
+  ColorPickerAlphaSlider,
+  ColorPickerInput,
+  ColorPickerTrigger,
+  ColorPickerSwatch,
+} from "./ui/color-picker";
 
 interface ControlsProps {
   mode?: "text" | "image";
@@ -107,16 +119,27 @@ export default function WatermarkControls({
               />
             </div>
             <div>
-              <Label htmlFor="watermark-color" className="text-xs font-semibold">
-                Color
-              </Label>
-              <input
-                id="watermark-color"
-                type="color"
-                value={textConfig.color}
-                onChange={(e) => updateText("color", e.target.value)}
-                className="block h-9 w-12 border rounded-md mt-1 cursor-pointer bg-white"
-              />
+              <Label className="text-xs font-semibold">Color</Label>
+              <div className="mt-1">
+                <ColorPicker
+                  value={textConfig.color}
+                  onValueChange={(val) => updateText("color", val)}
+                >
+                  <ColorPickerTrigger className="h-9 w-12 rounded-md border p-0 shadow-sm">
+                    <ColorPickerSwatch className="h-full w-full rounded-[inherit]" />
+                  </ColorPickerTrigger>
+                  <ColorPickerContent className="z-50">
+                    <ColorPickerArea />
+                    <ColorPickerHueSlider />
+                    <ColorPickerAlphaSlider />
+                    <div className="flex items-center gap-2">
+                      <ColorPickerEyeDropper />
+                      <ColorPickerInput />
+                      <ColorPickerFormatSelect />
+                    </div>
+                  </ColorPickerContent>
+                </ColorPicker>
+              </div>
             </div>
           </div>
 
