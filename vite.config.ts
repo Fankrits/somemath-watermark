@@ -10,6 +10,7 @@ import { nitro } from "nitro/vite";
 import powersyncVite from "./powersync-vite-plugin.ts";
 
 const config = defineConfig({
+  server: { port: 3005, strictPort: true },
   staged: {
     "*": "vp check --fix",
   },

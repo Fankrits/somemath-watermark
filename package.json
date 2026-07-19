@@ -6,7 +6,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "bun --bun vp dev --port 3000",
+    "dev": "bun --bun vp dev --port 3005",
     "generate-routes": "tsr generate",
     "build": "bun --bun vp build",
     "preview": "bun --bun vp preview",
