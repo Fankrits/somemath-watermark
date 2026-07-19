@@ -16,11 +16,14 @@ describe("EmbedPdfViewer", () => {
     cleanup();
   });
 
-  it("renders empty state when pdfBlobUrl is null", () => {
+  it("renders empty state when pdfBlobUrl is null and not loading", () => {
     render(<EmbedPdfViewer pdfBlobUrl={null} />);
-    expect(
-      screen.getByText('Click "Generate High-Fidelity Preview" to load doc reader'),
-    ).toBeTruthy();
+    expect(screen.getByText("No PDF selected")).toBeTruthy();
+  });
+
+  it("renders loading overlay when isLoading is true", () => {
+    render(<EmbedPdfViewer pdfBlobUrl={null} isLoading={true} />);
+    expect(screen.getByText("Applying watermark…")).toBeTruthy();
   });
 
   it("renders PDFViewer when pdfBlobUrl is provided", () => {
