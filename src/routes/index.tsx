@@ -99,6 +99,51 @@ function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [processingBatch, setProcessingBatch] = useState(false);
 
+  // Load configuration from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedMode = localStorage.getItem("pdf-watermark-mode");
+      if (savedMode === "text" || savedMode === "image") setMode(savedMode);
+
+      const savedTextConfig = localStorage.getItem("pdf-watermark-textConfig");
+      if (savedTextConfig) {
+        try {
+          setTextConfig((prev) => ({ ...prev, ...JSON.parse(savedTextConfig) }));
+        } catch (e) {
+          console.error("Failed to parse textConfig from localStorage", e);
+        }
+      }
+
+      const savedImageConfig = localStorage.getItem("pdf-watermark-imageConfig");
+      if (savedImageConfig) {
+        try {
+          setImageConfig((prev) => ({ ...prev, ...JSON.parse(savedImageConfig) }));
+        } catch (e) {
+          console.error("Failed to parse imageConfig from localStorage", e);
+        }
+      }
+    }
+  }, []);
+
+  // Save configuration to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pdf-watermark-mode", mode);
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pdf-watermark-textConfig", JSON.stringify(textConfig));
+    }
+  }, [textConfig]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pdf-watermark-imageConfig", JSON.stringify(imageConfig));
+    }
+  }, [imageConfig]);
+
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeItem = activeFileIndex !== null ? files[activeFileIndex] : null;
 

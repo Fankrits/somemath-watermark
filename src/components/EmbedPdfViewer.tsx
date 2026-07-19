@@ -35,7 +35,7 @@ export default function EmbedPdfViewer({ pdfBlobUrl, isLoading = false }: Viewer
         </div>
       )}
 
-      {/* PDF viewer — key forces full remount when URL changes so EmbedPDF reloads cleanly */}
+      {/* PDF viewer — uses key to force remount/reload when the PDF blob URL changes */}
       {pdfBlobUrl && (
         <PDFViewer
           key={pdfBlobUrl}

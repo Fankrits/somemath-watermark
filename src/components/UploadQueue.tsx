@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Trash2, FileText, CheckCircle2 } from "lucide-react";
 import { Button } from "./ui/button";
 
@@ -21,6 +21,7 @@ export default function UploadQueue({
   setActiveFileIndex,
 }: QueueProps) {
   const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = (newFiles: FileList) => {
     const added: QueueFile[] = [];
@@ -48,8 +49,10 @@ export default function UploadQueue({
   };
 
   return (
-    <div className="space-y-4 p-6 border rounded-lg bg-white/70 shadow-sm backdrop-blur-md">
-      <h3 className="text-sm font-semibold text-gray-700">Document Queue ({files.length})</h3>
+    <div className="space-y-4 p-6 border border-[var(--line)] rounded-2xl bg-white/70 shadow-sm backdrop-blur-md">
+      <h3 className="text-xs font-semibold text-[var(--sea-ink-soft)] uppercase tracking-wide">
+        Document Queue ({files.length})
+      </h3>
 
       <div
         onDragOver={(e) => {
@@ -62,25 +65,30 @@ export default function UploadQueue({
           setDragActive(false);
           if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
         }}
-        className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-          dragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:bg-gray-50/50"
+        className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 ${
+          dragActive
+            ? "border-[var(--lagoon)] bg-[var(--lagoon)]/10 text-[var(--lagoon-deep)]"
+            : "border-gray-300 hover:border-[var(--lagoon)]/50 hover:bg-gray-50/50"
         }`}
         onClick={() => {
-          const input = document.createElement("input");
-          input.type = "file";
-          input.accept = "application/pdf";
-          input.multiple = true;
-          input.onchange = (e) => {
-            const filesList = (e.target as HTMLInputElement).files;
-            if (filesList) handleFiles(filesList);
-          };
-          input.click();
+          fileInputRef.current?.click();
         }}
       >
         <FileText className="h-8 w-8 text-gray-400 mb-2" />
         <p className="text-xs text-gray-500 text-center font-medium">
           Drag & drop PDFs here or click to browse
         </p>
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="application/pdf"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            const filesList = e.target.files;
+            if (filesList) handleFiles(filesList);
+          }}
+        />
       </div>
 
       {files.length > 0 && (
@@ -89,9 +97,9 @@ export default function UploadQueue({
             <div
               key={idx}
               onClick={() => setActiveFileIndex(idx)}
-              className={`flex items-center justify-between p-2.5 rounded-md border text-xs cursor-pointer transition-all ${
+              className={`flex items-center justify-between p-2.5 rounded-xl border text-xs cursor-pointer transition-all duration-200 ${
                 activeFileIndex === idx
-                  ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                  ? "border-[var(--lagoon)] bg-[var(--lagoon)]/10 ring-1 ring-[var(--lagoon)]/20"
                   : "border-gray-200 hover:bg-gray-50/80 bg-white"
               }`}
             >
@@ -99,7 +107,7 @@ export default function UploadQueue({
                 {item.status === "completed" ? (
                   <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                 ) : (
-                  <FileText className="h-4 w-4 text-primary flex-shrink-0" />
+                  <FileText className="h-4 w-4 text-[var(--lagoon)] flex-shrink-0" />
                 )}
                 <span className="truncate font-medium text-gray-700">{item.file.name}</span>
               </div>

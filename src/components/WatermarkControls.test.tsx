@@ -80,8 +80,8 @@ describe("WatermarkControls", () => {
   it("calls setMode when mode button is clicked", () => {
     const { setMode } = setup({ mode: "text" });
 
-    // The redesigned button label is "image Watermark"
-    const imageButton = screen.getByRole("button", { name: /image watermark/i });
+    // The redesigned button label is "image Watermark", which is now a tab
+    const imageButton = screen.getByRole("tab", { name: /image watermark/i });
     fireEvent.click(imageButton);
 
     expect(setMode).toHaveBeenCalledWith("image");
@@ -141,6 +141,35 @@ describe("WatermarkControls", () => {
     expect(setImageConfig).toHaveBeenCalledWith({
       ...customConfig,
       yOffset: 45,
+    });
+  });
+
+  it("updates placement when clicking a position dot", () => {
+    const { setTextConfig } = setup({ mode: "text" });
+
+    // Click on the 'Top Left' button in the page grid
+    const topLeftBtn = screen.getByTitle("Top Left");
+    fireEvent.click(topLeftBtn);
+
+    expect(setTextConfig).toHaveBeenCalledWith({
+      ...defaultTextConfig,
+      placement: "top-left",
+    });
+  });
+
+  it("updates placement when clicking vertical or horizontal alignment options", () => {
+    const { setTextConfig } = setup({
+      mode: "text",
+      textConfig: { ...defaultTextConfig, placement: "middle-center" },
+    });
+
+    // Click 'Top' in vertical alignment
+    const topVerticalBtn = screen.getByRole("button", { name: "Top" });
+    fireEvent.click(topVerticalBtn);
+
+    expect(setTextConfig).toHaveBeenCalledWith({
+      ...defaultTextConfig,
+      placement: "top-center",
     });
   });
 });
