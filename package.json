@@ -17,8 +17,6 @@
   "dependencies": {
     "@embedpdf/react-pdf-viewer": "^2.14.4",
     "@journeyapps/wa-sqlite": "^1.2.6",
-    "@powersync/react": "^1.7.4",
-    "@powersync/web": "^1.26.1",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/query-db-collection": "latest",
     "@tanstack/react-db": "latest",

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap");
 @import "tailwindcss";
 @plugin '@tailwindcss/typography';
 
@@ -7,81 +7,81 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --sea-ink: #173a40;
-  --sea-ink-soft: #416166;
-  --lagoon: #4fb8b2;
-  --lagoon-deep: #328f97;
-  --palm: #2f6a4a;
-  --sand: #e7f0e8;
-  --foam: #f3faf5;
-  --surface: rgba(255, 255, 255, 0.74);
-  --surface-strong: rgba(255, 255, 255, 0.9);
-  --line: rgba(23, 58, 64, 0.14);
-  --inset-glint: rgba(255, 255, 255, 0.82);
-  --kicker: rgba(47, 106, 74, 0.9);
-  --bg-base: #e7f3ec;
-  --header-bg: rgba(251, 255, 248, 0.84);
-  --chip-bg: rgba(255, 255, 255, 0.8);
-  --chip-line: rgba(47, 106, 74, 0.18);
-  --link-bg-hover: rgba(255, 255, 255, 0.9);
-  --hero-a: rgba(79, 184, 178, 0.36);
-  --hero-b: rgba(47, 106, 74, 0.2);
+  --sea-ink: #072a38;
+  --sea-ink-soft: #2e596b;
+  --lagoon: #0193cd;
+  --lagoon-deep: #0178a8;
+  --palm: #007bb0;
+  --sand: #e8f4f9;
+  --foam: #f2f9fc;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-strong: rgba(255, 255, 255, 0.92);
+  --line: rgba(1, 147, 205, 0.16);
+  --inset-glint: rgba(255, 255, 255, 0.88);
+  --kicker: rgba(1, 120, 168, 0.92);
+  --bg-base: #e5f3f9;
+  --header-bg: rgba(246, 251, 254, 0.85);
+  --chip-bg: rgba(255, 255, 255, 0.85);
+  --chip-line: rgba(1, 147, 205, 0.22);
+  --link-bg-hover: rgba(255, 255, 255, 0.95);
+  --hero-a: rgba(1, 147, 205, 0.28);
+  --hero-b: rgba(0, 123, 176, 0.18);
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
+  --background: oklch(0.99 0.005 230);
+  --foreground: oklch(0.2 0.04 230);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
+  --card-foreground: oklch(0.2 0.04 230);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.2 0.04 230);
+  --primary: #0193cd;
+  --primary-foreground: #ffffff;
+  --secondary: oklch(0.95 0.02 225);
+  --secondary-foreground: #0178a8;
+  --muted: oklch(0.95 0.01 225);
+  --muted-foreground: oklch(0.48 0.04 230);
+  --accent: oklch(0.94 0.02 225);
+  --accent-foreground: #0178a8;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.871 0.006 286.286);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --border: rgba(1, 147, 205, 0.18);
+  --input: rgba(1, 147, 205, 0.18);
+  --ring: #0193cd;
+  --chart-1: #0193cd;
+  --chart-2: #00b4d8;
+  --chart-3: #007bb0;
+  --chart-4: #90e0ef;
+  --chart-5: #0077b6;
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.871 0.006 286.286);
+  --sidebar-foreground: oklch(0.2 0.04 230);
+  --sidebar-primary: #0193cd;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: oklch(0.95 0.02 225);
+  --sidebar-accent-foreground: #0178a8;
+  --sidebar-border: rgba(1, 147, 205, 0.18);
+  --sidebar-ring: #0193cd;
 }
 
 .dark {
-  --sea-ink: #d7ece8;
-  --sea-ink-soft: #afcdc8;
-  --lagoon: #60d7cf;
-  --lagoon-deep: #8de5db;
-  --palm: #6ec89a;
-  --sand: #0f1a1e;
-  --foam: #101d22;
-  --surface: rgba(16, 30, 34, 0.8);
-  --surface-strong: rgba(15, 27, 31, 0.92);
-  --line: rgba(141, 229, 219, 0.18);
-  --inset-glint: rgba(194, 247, 238, 0.14);
-  --kicker: #b8efe5;
-  --bg-base: #0a1418;
-  --header-bg: rgba(10, 20, 24, 0.8);
-  --chip-bg: rgba(13, 28, 32, 0.9);
-  --chip-line: rgba(141, 229, 219, 0.24);
-  --link-bg-hover: rgba(24, 44, 49, 0.8);
-  --hero-a: rgba(96, 215, 207, 0.18);
-  --hero-b: rgba(110, 200, 154, 0.12);
+  --sea-ink: #d8f1fb;
+  --sea-ink-soft: #a0d4eb;
+  --lagoon: #38bdf8;
+  --lagoon-deep: #7dd3fc;
+  --palm: #0284c7;
+  --sand: #071722;
+  --foam: #0a1c29;
+  --surface: rgba(10, 28, 41, 0.82);
+  --surface-strong: rgba(12, 33, 48, 0.94);
+  --line: rgba(56, 189, 248, 0.2);
+  --inset-glint: rgba(125, 211, 252, 0.16);
+  --kicker: #7dd3fc;
+  --bg-base: #051017;
+  --header-bg: rgba(5, 16, 23, 0.82);
+  --chip-bg: rgba(10, 28, 41, 0.9);
+  --chip-line: rgba(56, 189, 248, 0.26);
+  --link-bg-hover: rgba(14, 40, 58, 0.85);
+  --hero-a: rgba(1, 147, 205, 0.25);
+  --hero-b: rgba(56, 189, 248, 0.15);
 
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
@@ -118,7 +118,8 @@
 }
 
 @theme inline {
-  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-brand: "Outfit", "Space Grotesk", "Plus Jakarta Sans", sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -356,4 +357,12 @@ a {
     background-color: var(--background);
     color: var(--foreground);
   }
+}
+
+.brand-title {
+  font-family: var(--font-brand);
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--sea-ink) 30%, #0193cd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

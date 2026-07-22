@@ -5,9 +5,15 @@ import WatermarkControls from "#/components/WatermarkControls";
 import UploadQueue from "#/components/UploadQueue";
 import type { QueueFile } from "#/components/UploadQueue";
 import type { TextWatermarkConfig, ImageWatermarkConfig } from "#/lib/watermark-utils";
+import {
+  DEBOUNCE_MS,
+  DEFAULT_TEXT_CONFIG,
+  DEFAULT_IMAGE_CONFIG,
+  STORAGE_KEYS,
+} from "#/lib/watermark-constants";
 import { Button } from "#/components/ui/button";
 import JSZip from "jszip";
-import { Download, FileDown, Layers } from "lucide-react";
+import { Download, FileDown, Upload } from "lucide-react";
 
 const EmbedPdfViewer = React.lazy(() =>
   typeof window !== "undefined"
@@ -63,36 +69,15 @@ const applyWatermarkServerFn = createServerFn({ method: "POST" })
 
 export const Route = createFileRoute("/")({ component: Home });
 
-const DEBOUNCE_MS = 600;
-
 function Home() {
   const [mode, setMode] = useState<"text" | "image">("text");
   const [files, setFiles] = useState<QueueFile[]>([]);
   const [activeFileIndex, setActiveFileIndex] = useState<number | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const [textConfig, setTextConfig] = useState<TextWatermarkConfig>({
-    text: "CONFIDENTIAL",
-    fontFamily: "Helvetica",
-    fontSize: 32,
-    color: "#ff0000",
-    opacity: 0.5,
-    rotation: -45,
-    placement: "middle-center",
-    xOffset: 0,
-    yOffset: 0,
-    isBold: false,
-    isItalic: false,
-  });
+  const [textConfig, setTextConfig] = useState<TextWatermarkConfig>(DEFAULT_TEXT_CONFIG);
 
-  const [imageConfig, setImageConfig] = useState<ImageWatermarkConfig>({
-    scale: 0.5,
-    opacity: 0.5,
-    rotation: 0,
-    placement: "middle-center",
-    xOffset: 0,
-    yOffset: 0,
-  });
+  const [imageConfig, setImageConfig] = useState<ImageWatermarkConfig>(DEFAULT_IMAGE_CONFIG);
 
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const viewerUrlRef = useRef<string | null>(null);
@@ -102,10 +87,10 @@ function Home() {
   // Load configuration from localStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedMode = localStorage.getItem("pdf-watermark-mode");
+      const savedMode = localStorage.getItem(STORAGE_KEYS.mode);
       if (savedMode === "text" || savedMode === "image") setMode(savedMode);
 
-      const savedTextConfig = localStorage.getItem("pdf-watermark-textConfig");
+      const savedTextConfig = localStorage.getItem(STORAGE_KEYS.textConfig);
       if (savedTextConfig) {
         try {
           setTextConfig((prev) => ({ ...prev, ...JSON.parse(savedTextConfig) }));
@@ -114,7 +99,7 @@ function Home() {
         }
       }
 
-      const savedImageConfig = localStorage.getItem("pdf-watermark-imageConfig");
+      const savedImageConfig = localStorage.getItem(STORAGE_KEYS.imageConfig);
       if (savedImageConfig) {
         try {
           setImageConfig((prev) => ({ ...prev, ...JSON.parse(savedImageConfig) }));
@@ -125,22 +110,33 @@ function Home() {
     }
   }, []);
 
+  // Load default watermark image (/watermark.png converted from watermark.webp)
+  useEffect(() => {
+    fetch("/watermark.png")
+      .then((res) => res.blob())
+      .then((blob) => {
+        const defaultFile = new File([blob], "watermark.png", { type: "image/png" });
+        setImageFile(defaultFile);
+      })
+      .catch((err) => console.error("Failed to load default watermark image:", err));
+  }, []);
+
   // Save configuration to localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("pdf-watermark-mode", mode);
+      localStorage.setItem(STORAGE_KEYS.mode, mode);
     }
   }, [mode]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("pdf-watermark-textConfig", JSON.stringify(textConfig));
+      localStorage.setItem(STORAGE_KEYS.textConfig, JSON.stringify(textConfig));
     }
   }, [textConfig]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("pdf-watermark-imageConfig", JSON.stringify(imageConfig));
+      localStorage.setItem(STORAGE_KEYS.imageConfig, JSON.stringify(imageConfig));
     }
   }, [imageConfig]);
 
@@ -295,23 +291,99 @@ function Home() {
     }
   };
 
+  const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
+  const dragCounter = useRef(0);
+
+  const handleGlobalFiles = useCallback(
+    (fileList: FileList | File[]) => {
+      const added: QueueFile[] = [];
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+          added.push({ file, status: "pending" });
+        }
+      }
+      if (added.length > 0) {
+        setFiles((prev) => {
+          const updated = [...prev, ...added];
+          if (activeFileIndex === null) {
+            setActiveFileIndex(prev.length);
+          }
+          return updated;
+        });
+      }
+    },
+    [activeFileIndex],
+  );
+
+  const handleGlobalDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    if (e.dataTransfer.types && Array.from(e.dataTransfer.types).includes("Files")) {
+      setIsDraggingGlobal(true);
+    }
+  };
+
+  const handleGlobalDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current === 0) {
+      setIsDraggingGlobal(false);
+    }
+  };
+
+  const handleGlobalDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleGlobalDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingGlobal(false);
+    dragCounter.current = 0;
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleGlobalFiles(e.dataTransfer.files);
+    }
+  };
+
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div
+      className="h-screen flex flex-col overflow-hidden relative"
+      onDragEnter={handleGlobalDragEnter}
+      onDragLeave={handleGlobalDragLeave}
+      onDragOver={handleGlobalDragOver}
+      onDrop={handleGlobalDrop}
+    >
+      {/* ── GLOBAL DRAG & DROP OVERLAY ── */}
+      {isDraggingGlobal && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0193cd]/40 backdrop-blur-sm transition-all animate-in fade-in duration-200 pointer-events-none">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-3xl border-2 border-dashed border-white/60 bg-white/10 shadow-2xl text-white max-w-md text-center">
+            <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center animate-bounce">
+              <Upload className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold font-brand tracking-tight">
+                Drop PDF Files Anywhere
+              </h2>
+              <p className="text-sm opacity-90 mt-1">
+                Release your files to automatically add them to the queue
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── STICKY HEADER ── */}
       <header className="shrink-0 border-b border-[var(--line)] bg-[var(--header-bg)] backdrop-blur-md z-40">
         <div className="max-w-screen-2xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--lagoon)] shadow-md">
-              <Layers className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight display-title text-[var(--sea-ink)] leading-none">
-                PDF Watermark Studio
-              </h1>
-              <p className="text-[10px] text-[var(--sea-ink-soft)] font-medium">
-                100% local · no upload · live preview
-              </p>
-            </div>
+            <img src="/logo.svg" alt="SomeMath Logo" className="h-9 w-9 object-contain" />
+            <h1 className="text-xl font-extrabold brand-title leading-none select-none">
+              SomeMath
+            </h1>
           </div>
 
           <div className="flex items-center gap-2">

@@ -28,16 +28,22 @@ import {
   ColorPickerTrigger,
   ColorPickerSwatch,
 } from "./ui/color-picker";
-import type { WatermarkPlacement } from "#/lib/watermark-utils";
+import type {
+  WatermarkPlacement,
+  TextWatermarkConfig,
+  ImageWatermarkConfig,
+} from "#/lib/watermark-utils";
+
+type WatermarkMode = "text" | "image";
 
 interface ControlsProps {
-  mode?: "text" | "image";
-  activeMode?: "text" | "image";
-  setMode: (mode: "text" | "image") => void;
-  textConfig: any;
-  setTextConfig: (config: any) => void;
-  imageConfig: any;
-  setImageConfig: (config: any) => void;
+  mode?: WatermarkMode;
+  activeMode?: WatermarkMode;
+  setMode: (mode: WatermarkMode) => void;
+  textConfig: TextWatermarkConfig;
+  setTextConfig: (config: TextWatermarkConfig) => void;
+  imageConfig: ImageWatermarkConfig;
+  setImageConfig: (config: ImageWatermarkConfig) => void;
   imageFile: File | null;
   setImageFile: (file: File | null) => void;
 }
@@ -54,46 +60,6 @@ const PLACEMENT_GRID: Array<{ value: WatermarkPlacement; label: string }> = [
   { value: "bottom-center", label: "Bottom Center" },
   { value: "bottom-right", label: "Bottom Right" },
 ];
-
-interface SegmentedControlProps<T extends string> {
-  options: Array<{ value: T; label: string }>;
-  value: T;
-  onChange: (val: T) => void;
-  disabled?: boolean;
-}
-
-function SegmentedControl<T extends string>({
-  options,
-  value,
-  onChange,
-  disabled,
-}: SegmentedControlProps<T>) {
-  return (
-    <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl border border-[var(--line)] bg-white/20 shadow-inner">
-      {options.map((opt) => {
-        const isActive = value === opt.value && !disabled;
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(opt.value)}
-            className={[
-              "py-2 text-[11px] font-bold rounded-lg transition-all duration-150 cursor-pointer select-none text-center outline-none",
-              disabled
-                ? "opacity-30 cursor-not-allowed text-[var(--sea-ink-soft)]"
-                : isActive
-                  ? "bg-[var(--lagoon)]/25 text-[var(--lagoon-deep)] shadow-sm shadow-[var(--lagoon)]/10 ring-1 ring-[var(--lagoon)]/10"
-                  : "text-[var(--sea-ink-soft)] hover:bg-white/40 hover:text-[var(--sea-ink)]",
-            ].join(" ")}
-          >
-            {opt.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 export default function WatermarkControls({
   mode,
@@ -113,8 +79,12 @@ export default function WatermarkControls({
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const updateText = (key: string, val: any) => setTextConfig({ ...textConfig, [key]: val });
-  const updateImage = (key: string, val: any) => setImageConfig({ ...imageConfig, [key]: val });
+  const updateText = <K extends keyof TextWatermarkConfig>(key: K, val: TextWatermarkConfig[K]) =>
+    setTextConfig({ ...textConfig, [key]: val });
+  const updateImage = <K extends keyof ImageWatermarkConfig>(
+    key: K,
+    val: ImageWatermarkConfig[K],
+  ) => setImageConfig({ ...imageConfig, [key]: val });
 
   const currentPlacement: WatermarkPlacement =
     resolvedMode === "text" ? textConfig.placement : imageConfig.placement;
@@ -141,24 +111,24 @@ export default function WatermarkControls({
           onValueChange={(val) => setMode(val as "text" | "image")}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-2 w-full bg-white/40 border border-[var(--line)]">
+          <TabsList className="grid grid-cols-2 w-full h-10 p-1 bg-white/40 border border-[var(--line)] rounded-xl shadow-xs">
             <TabsTrigger
               value="text"
               aria-label="Text Watermark"
               onClick={() => setMode("text")}
-              className="gap-1.5 py-2 cursor-pointer data-[state=active]:bg-[var(--lagoon)]/15 data-[state=active]:text-[var(--lagoon-deep)]"
+              className="h-8 gap-1.5 cursor-pointer rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-[var(--lagoon)]/20 data-[state=active]:text-[var(--lagoon-deep)] data-[state=active]:shadow-xs"
             >
               <Type className="h-3.5 w-3.5" />
-              <span className="text-xs font-semibold">Text Watermark</span>
+              <span>Text Watermark</span>
             </TabsTrigger>
             <TabsTrigger
               value="image"
               aria-label="Image Watermark"
               onClick={() => setMode("image")}
-              className="gap-1.5 py-2 cursor-pointer data-[state=active]:bg-[var(--lagoon)]/15 data-[state=active]:text-[var(--lagoon-deep)]"
+              className="h-8 gap-1.5 cursor-pointer rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-[var(--lagoon)]/20 data-[state=active]:text-[var(--lagoon-deep)] data-[state=active]:shadow-xs"
             >
               <ImageIcon className="h-3.5 w-3.5" />
-              <span className="text-xs font-semibold">Image Watermark</span>
+              <span>Image Watermark</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -523,69 +493,6 @@ export default function WatermarkControls({
                   );
                 })}
               </div>
-            </div>
-          </div>
-
-          {/* Alignment Segmented Controllers */}
-          <div className="space-y-3 pt-1">
-            <div className="space-y-1">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--sea-ink-soft)] block">
-                Vertical Alignment
-              </span>
-              <SegmentedControl
-                options={[
-                  { value: "top", label: "Top" },
-                  { value: "middle", label: "Center" },
-                  { value: "bottom", label: "Bottom" },
-                ]}
-                value={
-                  tileEnabled
-                    ? "middle"
-                    : (() => {
-                        if (currentPlacement === "tile" || currentPlacement === "custom")
-                          return "middle";
-                        const parts = currentPlacement.split("-");
-                        return (parts[0] as "top" | "middle" | "bottom") || "middle";
-                      })()
-                }
-                onChange={(v) => {
-                  setTileEnabled(false);
-                  const parts = currentPlacement.split("-");
-                  const h = parts[1] || "center";
-                  handlePlacementChange(`${v}-${h}` as WatermarkPlacement);
-                }}
-                disabled={tileEnabled}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--sea-ink-soft)] block">
-                Horizontal Alignment
-              </span>
-              <SegmentedControl
-                options={[
-                  { value: "left", label: "Left" },
-                  { value: "center", label: "Center" },
-                  { value: "right", label: "Right" },
-                ]}
-                value={
-                  tileEnabled
-                    ? "center"
-                    : (() => {
-                        if (currentPlacement === "tile" || currentPlacement === "custom")
-                          return "center";
-                        const parts = currentPlacement.split("-");
-                        return (parts[1] as "left" | "center" | "right") || "center";
-                      })()
-                }
-                onChange={(h) => {
-                  setTileEnabled(false);
-                  const parts = currentPlacement.split("-");
-                  const v = parts[0] || "middle";
-                  handlePlacementChange(`${v}-${h}` as WatermarkPlacement);
-                }}
-                disabled={tileEnabled}
-              />
             </div>
           </div>
 

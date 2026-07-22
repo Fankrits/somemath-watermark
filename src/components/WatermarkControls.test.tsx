@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vite-plus/test";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import WatermarkControls from "./WatermarkControls";
+import type { TextWatermarkConfig, ImageWatermarkConfig } from "#/lib/watermark-utils";
 
 // Mock ResizeObserver for radix select in jsdom
 class MockResizeObserver {
@@ -16,7 +17,7 @@ describe("WatermarkControls", () => {
     cleanup();
   });
 
-  const defaultTextConfig = {
+  const defaultTextConfig: TextWatermarkConfig = {
     text: "TEST",
     fontFamily: "Helvetica",
     fontSize: 24,
@@ -28,7 +29,7 @@ describe("WatermarkControls", () => {
     yOffset: 20,
   };
 
-  const defaultImageConfig = {
+  const defaultImageConfig: ImageWatermarkConfig = {
     scale: 1.0,
     opacity: 0.5,
     rotation: 45,
@@ -154,22 +155,6 @@ describe("WatermarkControls", () => {
     expect(setTextConfig).toHaveBeenCalledWith({
       ...defaultTextConfig,
       placement: "top-left",
-    });
-  });
-
-  it("updates placement when clicking vertical or horizontal alignment options", () => {
-    const { setTextConfig } = setup({
-      mode: "text",
-      textConfig: { ...defaultTextConfig, placement: "middle-center" },
-    });
-
-    // Click 'Top' in vertical alignment
-    const topVerticalBtn = screen.getByRole("button", { name: "Top" });
-    fireEvent.click(topVerticalBtn);
-
-    expect(setTextConfig).toHaveBeenCalledWith({
-      ...defaultTextConfig,
-      placement: "top-center",
     });
   });
 });
