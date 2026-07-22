@@ -23,7 +23,7 @@ const config = defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: lazyPlugins(() => [
     devtools(),
-    nitro({ rollupConfig: { external: [/^@sentry\//] }, preset: "bun" }),
+    nitro({ rollupConfig: { external: [/^@sentry\//] }, preset: "vercel" }),
     powersyncVite(),
     tailwindcss(),
     tanstackStart(),

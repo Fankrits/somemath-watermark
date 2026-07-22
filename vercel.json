@@ -1,5 +1,4 @@
 {
   "installCommand": "bun install",
-  "buildCommand": "bun --bun vp build",
-  "outputDirectory": ".output/public"
+  "buildCommand": "bun --bun vp build"
 }
